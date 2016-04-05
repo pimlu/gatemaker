@@ -1,0 +1,195 @@
+{
+var wsplit = function(group) {
+  return group.map(function(t) {
+    return t[t.length-1];
+  });
+};
+var merge = function(head, tail) {
+  tail.splice(0, 0, head);
+  return tail;
+};
+var leftReduce = function(head, tail) {
+  return tail.reduce(function(prev, next){
+  	return [next[1], prev, next[3]];
+  }, head)
+};
+}
+
+Modules
+  = modules:(_ Module)* _ { return wsplit(modules); }
+
+Module
+  = 'module' w name:id _ template:('<'_ id (_ ',' _ id)* _'>'/'') _ '{' rules:(_ Rule)* _ '}' {
+    var module = {
+      t:'module',
+      name:name,
+      rules:wsplit(rules),
+    };
+    if(template.length > 1) {
+      module.template = merge(template[2], wsplit(template[3]));
+    }
+    return module;
+  }
+
+Rule
+  = Module
+  / decl:Decl _ ';' { return decl; }
+  / stmt:Stmt _ ';' { return stmt; }
+  / 'if' _ '(' _ cond:IntExpr _ ')' _ '{' rules:(_ Rule)* _ '}' {
+    return {
+      t:'if',
+      cond:cond,
+      rules:wsplit(rules)
+    };
+  }
+
+Decl
+  = io:io _ expr:Expr { return {t:io, expr:expr}; }
+  / type:TypeExpr list:ListExpr {
+    return {
+      t:'var',
+      type: type,
+      list: list,
+      location: location()
+    };
+  }
+
+io = 'input' / 'output'
+
+Stmt
+  = head:Expr tail:(_ '=' _ Expr)+ {
+  	return {
+      t:'join',
+      conns:merge(head,wsplit(tail))
+     };
+  } / module:id _ template:('<' _ ListMath _ '>'/'') _ input:Expr _ output:Expr {
+    var modref = {
+      t:'modref',
+      name:module,
+      in:input,
+      out: output,
+    };
+    if(template.length > 1) modref.template = template[2];
+    return modref;
+  };
+
+//types for declared variables
+TypeExpr
+  = sub:SubType tail:(_ Slice)+ {
+  	return {
+      t:'slice',
+      sub:sub,
+      tail:wsplit(tail)
+    };
+  }
+  / SubType
+
+SubType
+  = name:id { return {t:'literal',name:name}; }
+  / '(' head:TypeExpr tail:(_ ',' _ TypeExpr)* ')' {
+    return {
+      t:'tuple',
+      body:merge(head,wsplit(tail))
+    };
+  }
+  
+
+Expr
+  = sub:SubExpr tail:(_ Slice)+ {
+  	return {
+      t:'slice',
+      sub:sub,
+      tail:wsplit(tail)
+    };
+  }
+  / SubExpr
+
+Slice
+  = '[' _ inner:InnerSlice _ ']' { return inner; }
+
+InnerSlice
+  = l:CondInt _ ':' _ r:CondInt { return {t:'slice',l:l,r:r}; }
+  / index:IntExpr { return {t:'index', index:index}; }
+
+CondInt = IntExpr / None
+
+None = '' { return null; }
+
+SubExpr
+  = OpExpr
+  / id
+  / '(' body:ListExpr ')' { return {t:'tuple', body: body}; }
+  / '[' body:ListExpr ']' { return {t:'bus', body: body}; }
+
+ListExpr
+  = _ head:Expr tail:(_ ',' _ Expr)* _ { return merge(head, wsplit(tail)); }
+//boolean operators
+OpExpr
+  = head:AndExpr tail:(_ ('=='/'!=') _ AndExpr)*
+  { return leftReduce(head, tail); }
+AndExpr = head:XorExpr tail:(_ ('&'/'~&') _ XorExpr)*
+  { return leftReduce(head, tail); }
+XorExpr = head:OrExpr tail:(_ ('^'/'~^') _ OrExpr)*
+  { return leftReduce(head, tail); }
+OrExpr = head:ExprP tail:(_ ('|'/'~|') _ Expr)*
+  { return leftReduce(head, tail); }
+
+//used to prevent left recursion for slices of OrExpr... ugh
+ExprP
+  = sub:SubExprP tail:(_ Slice)+ {
+  	return {
+      t:'slice',
+      sub:sub,
+      tail:wsplit(tail)
+    };
+  }
+  / SubExprP
+SubExprP
+  = id
+  / '(' body:ListExpr ')' {
+  	return {t:'tuple', body: body};
+  }
+  / '[' body:ListExpr ']' {
+  	return {t:'bus', body: body};
+  }
+
+//used for math (especially in templates)
+IntExpr = left:IntSum _ op:$([=!]'='/[<>]('='/'')) _ right:IntSum {
+    return [op,left,right];
+  }
+  / IntSum
+
+IntSum = head:IntTerm tail:(_ ('+' / '-') _ IntTerm)*
+    { return leftReduce(head, tail); }
+
+IntTerm
+  = head:IntNeg tail:(_ ('*' / '/') _ IntNeg)*
+  { return leftReduce(head, tail); }
+
+IntNeg
+  = op:('+'/'-') _ fact:IntFactor { return [op,0,fact]; }
+  / IntFactor
+
+IntFactor
+  = '(' _ expr:IntExpr _ ')' { return expr; }
+  / num
+  / id
+
+ListMath
+  = _ head:IntExpr tail:(_ ',' _ IntExpr)* _ { return merge(head, wsplit(tail)); }
+
+_ 'whitespace'
+  = [ \t\n\r]* comment
+w 'whitespace'
+  = [ \t\n\r]+ comment
+
+comment
+  = '/*' block _
+  / '//' [^\n\r]* _
+  / ''
+block = (!("/*"/"*/") . / '/*' block)* '*/'
+num 'number'
+  = digits:$[0-9]+ { return +digits; }
+id 'identifier'
+  = name:$[a-zA-Z0-9']+ { return name; }
+  

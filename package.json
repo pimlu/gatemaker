@@ -1,0 +1,21 @@
+{
+  "name": "gatemaker",
+  "version": "1.0.0",
+  "description": "toy HDL",
+  "main": "src/index.js",
+  "bin": "bin/gatemaker",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pimlu/gatemaker.git"
+  },
+  "author": "pimlu",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/pimlu/gatemaker/issues"
+  },
+  "homepage": "https://github.com/pimlu/gatemaker#readme",
+  "private": true
+}
