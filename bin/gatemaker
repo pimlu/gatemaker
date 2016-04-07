@@ -1,1 +1,12 @@
 #!/usr/bin/env node
+'use strict';
+let api = require('../src/index');
+
+if(process.argv.length === 2) help();
+
+function help() {
+  console.log('usage: gatemaker PATH');
+  process.exit(1);
+}
+
+api.compfile(process.argv[2], console.log.bind(console));
