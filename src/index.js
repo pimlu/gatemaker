@@ -1,6 +1,7 @@
 'use strict';
-
-let fs = require('fs'),
+//use bluebird only internally (don't want to force it on others)
+let Promise = require('bluebird');
+let fs = Promise.promisifyAll(require('fs')),
   path = require('path'),
   PEG = require('pegjs');
 
@@ -9,16 +10,18 @@ let lang = fs.readFileSync(path.resolve(__dirname, 'lang.peg'), 'utf8');
 let parser = PEG.buildParser(lang);
 
 //doesn't do any processing past the parser right now
-function comp(str, opt) {
-  return parser.parse(str);
+function comp(tree, opt) {
+  return tree;
 };
 
 //read file and send it over to comp
-function compfile(path, opt) {
+function compfiles(paths, opt) {
   if(typeof opt === 'function') opt = {cb:opt};
-  fs.readFile(path, 'utf8', (err, data) => {
-    if(err) throw err;
-    opt.cb(comp(data, opt));
+  Promise.map(paths, path => fs.readFileAsync(path, 'utf8').then(
+    data => parser.parse(data)
+  )).then(parses => {
+    let tree = [].concat.apply([], parses);
+    opt.cb(comp(tree));
   });
 };
 
@@ -26,7 +29,7 @@ function compfile(path, opt) {
 let api = {
   parser: parser,
   comp: comp,
-  compfile: compfile
+  compfiles: compfiles
 };
 
 module.exports = api;

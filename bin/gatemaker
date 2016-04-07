@@ -9,4 +9,4 @@ function help() {
   process.exit(1);
 }
 
-api.compfile(process.argv[2], console.log.bind(console));
+api.compfiles(process.argv.slice(2), console.log.bind(console));

@@ -17,5 +17,9 @@
     "url": "https://github.com/pimlu/gatemaker/issues"
   },
   "homepage": "https://github.com/pimlu/gatemaker#readme",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "bluebird": "^3.3.4",
+    "pegjs": "^0.9.0"
+  }
 }
