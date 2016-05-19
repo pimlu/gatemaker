@@ -9,4 +9,6 @@ function help() {
   process.exit(1);
 }
 
-api.compfiles(process.argv.slice(2), console.log.bind(console));
+api.compFiles(process.argv.slice(2), res => {
+  console.log(JSON.stringify(res, null, 2));
+});

@@ -24,6 +24,7 @@ Module
       t:'module',
       name:name,
       rules:wsplit(rules),
+      template: []
     };
     if(template.length > 1) {
       module.template = merge(template[2], wsplit(template[3]));
@@ -35,13 +36,30 @@ Rule
   = Module
   / decl:Decl _ ';' { return decl; }
   / stmt:Stmt _ ';' { return stmt; }
-  / 'if' _ '(' _ cond:IntExpr _ ')' _ '{' rules:(_ Rule)* _ '}' {
+  / IfStmt
+
+IfStmt
+  = 'if' _ '(' _ cond:IntExpr _ ')' _ '{' rules:(_ Rule)* _ '}' _ elstmt:ElseStmt {
     return {
-      t:'if',
-      cond:cond,
-      rules:wsplit(rules)
+      t: 'if',
+      cond: cond,
+      rules: wsplit(rules),
+      elstmt: elstmt
     };
   }
+ElseStmt
+  = 'elif' _ '(' _ cond:IntExpr _ ')' _ '{' rules:(_ Rule)* _ '}' _ elstmt:ElseStmt {
+    return [{
+      t: 'if',
+      cond: cond,
+      rules: wsplit(rules),
+      elstmt: elstmt
+    }];
+  }
+  / 'else' _ '{' rules:(_ Rule)* _ '}' {
+    return wsplit(rules);
+  }
+  / _ { return []; }
 
 Decl
   = io:io _ expr:Expr { return {t:io, expr:expr}; }
@@ -118,6 +136,7 @@ None = '' { return null; }
 SubExpr
   = OpExpr
   / id
+  / special:[_01] { return {t:special}; }
   / '(' body:ListExpr ')' { return {t:'tuple', body: body}; }
   / '[' body:ListExpr ']' { return {t:'bus', body: body}; }
 
@@ -191,5 +210,5 @@ block = (!("/*"/"*/") . / '/*' block)* '*/'
 num 'number'
   = digits:$[0-9]+ { return +digits; }
 id 'identifier'
-  = name:$[a-zA-Z0-9']+ { return name; }
+  = name:$([a-zA-Z][a-zA-Z'0-9]*) { return name; }
   
