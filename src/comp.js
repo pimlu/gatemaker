@@ -56,17 +56,24 @@ function comp(tree, o) {
     
     //evaluating numeric values - used for templates of modules
     let ctx = _.zipObject(templ, params);
-    let iOpsChar = '+-*/'.split('');
-    let iOps = _.zipObject(iOpsChar, iOpsChar.map(
-      c => eval(`(function(a,b) { return a ${c} b | 0; })`
-    )));
+    //build our dictionary of integer operators
+    let iOpsStrs = [].concat(
+      '+-*/><'.split(''),
+      '<= >= == !='.split(' ')
+    );
+    let iOps = _.zipObject(iOpsStrs, iOpsStrs.map(
+      c => eval(`(function(a,b) { return (a ${c} b) | 0; })`)
+    ));
+    //operator expressions inside the tree have their own 'custom' parse tree
+    //example for a+2 would be ['+','a',2].  it's recursive ofc
     function evalIntExpr(expr) {
       if(Array.isArray(expr)) {
         return iOps[expr[0]](
           evalIntExpr(expr[1]),
           evalIntExpr(expr[2]));
+      } else if(typeof expr === 'string') {
+        return ctx[expr];
       }
-      //FIXME
       return expr;
     }
     //builds a particular set of rules within a particular module context

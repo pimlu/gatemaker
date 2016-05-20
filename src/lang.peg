@@ -21,9 +21,9 @@ Modules
 Module
   = 'module' w name:id _ template:('<'_ id (_ ',' _ id)* _'>'/'') _ '{' rules:(_ Rule)* _ '}' {
     var module = {
-      t:'module',
-      name:name,
-      rules:wsplit(rules),
+      t: 'module',
+      name: name,
+      rules: wsplit(rules),
       template: []
     };
     if(template.length > 1) {
@@ -67,8 +67,7 @@ Decl
     return {
       t:'var',
       type: type,
-      list: list,
-      location: location()
+      list: list
     };
   }
 
@@ -77,14 +76,14 @@ io = 'input' / 'output'
 Stmt
   = head:Expr tail:(_ '=' _ Expr)+ {
   	return {
-      t:'join',
-      conns:merge(head,wsplit(tail))
+      t: 'join',
+      conns: merge(head,wsplit(tail))
      };
   } / module:id _ template:('<' _ ListMath _ '>'/'') _ input:Expr _ output:Expr {
     var modref = {
-      t:'modref',
-      name:module,
-      in:input,
+      t: 'modref',
+      name: module,
+      in: input,
       out: output,
     };
     if(template.length > 1) modref.template = template[2];
@@ -95,19 +94,19 @@ Stmt
 TypeExpr
   = sub:SubType tail:(_ Slice)+ {
   	return {
-      t:'slice',
-      sub:sub,
-      tail:wsplit(tail)
+      t: 'slice',
+      sub: sub,
+      tail: wsplit(tail)
     };
   }
   / SubType
 
 SubType
-  = name:id { return {t:'literal',name:name}; }
+  = name:id { return {t:'literal', name:name}; }
   / '(' head:TypeExpr tail:(_ ',' _ TypeExpr)* ')' {
     return {
-      t:'tuple',
-      body:merge(head,wsplit(tail))
+      t: 'tuple',
+      body: merge(head,wsplit(tail))
     };
   }
   
@@ -115,9 +114,9 @@ SubType
 Expr
   = sub:SubExpr tail:(_ Slice)+ {
   	return {
-      t:'slice',
-      sub:sub,
-      tail:wsplit(tail)
+      t: 'slice',
+      sub: sub,
+      tail: wsplit(tail)
     };
   }
   / SubExpr
@@ -137,8 +136,8 @@ SubExpr
   = OpExpr
   / id
   / special:[_01] { return {t:special}; }
-  / '(' body:ListExpr ')' { return {t:'tuple', body: body}; }
-  / '[' body:ListExpr ']' { return {t:'bus', body: body}; }
+  / '(' body:ListExpr ')' { return {t: 'tuple', body: body}; }
+  / '[' body:ListExpr ']' { return {t: 'bus', body: body}; }
 
 ListExpr
   = _ head:Expr tail:(_ ',' _ Expr)* _ { return merge(head, wsplit(tail)); }
@@ -157,9 +156,9 @@ OrExpr = head:ExprP tail:(_ ('|'/'~|') _ Expr)*
 ExprP
   = sub:SubExprP tail:(_ Slice)+ {
   	return {
-      t:'slice',
-      sub:sub,
-      tail:wsplit(tail)
+      t: 'slice',
+      sub: sub,
+      tail: wsplit(tail)
     };
   }
   / SubExprP
@@ -174,7 +173,7 @@ SubExprP
 
 //used for math (especially in templates)
 IntExpr = left:IntSum _ op:$([=!]'='/[<>]('='/'')) _ right:IntSum {
-    return [op,left,right];
+    return [op, left, right];
   }
   / IntSum
 
@@ -186,7 +185,7 @@ IntTerm
   { return leftReduce(head, tail); }
 
 IntNeg
-  = op:('+'/'-') _ fact:IntFactor { return [op,0,fact]; }
+  = op:('+'/'-') _ fact:IntFactor { return [op, 0, fact]; }
   / IntFactor
 
 IntFactor
@@ -210,5 +209,5 @@ block = (!("/*"/"*/") . / '/*' block)* '*/'
 num 'number'
   = digits:$[0-9]+ { return +digits; }
 id 'identifier'
-  = name:$([a-zA-Z][a-zA-Z'0-9]*) { return name; }
+  = name:$([a-zA-Z'][a-zA-Z'0-9]*) { return name; }
   
