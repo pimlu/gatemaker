@@ -85,6 +85,7 @@ Stmt
       name: module,
       in: input,
       out: output,
+      template: []
     };
     if(template.length > 1) modref.template = template[2];
     return modref;

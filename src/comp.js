@@ -45,14 +45,22 @@ function comp(tree, o) {
     //console.log(entry);
     //basic error checking
     let modName = main+(params.length?`<${params.join(',')}>`:'');
+    console.log('building '+modName);
     if(mod === null) throw new Error(`module ${modName} not found`);
     let templ = mod.template;
     if(params.length !== templ.length) throw new Error(`module ${main} passed ${params.length} params, expected ${templ.length}`);
     if(past.length >= opt.maxDepth) throw new Error(`module ${modName} reached max recursion depth (${config()})`)
+    let state = {
+      main: main,
+      params: params
+    };
     for(let p of past) {
-      if(main === p.main && _.isEqual(params, p.params)) throw new Error(`cycle detected for module ${modName}`);
+      if(_.isEqual(state, p)) throw new Error(`cycle detected for module ${modName}`);
     }
     //end of error checking
+    
+    past = _.clone(past);
+    past.push(state);
     
     //evaluating numeric values - used for templates of modules
     let ctx = _.zipObject(templ, params);
@@ -77,10 +85,10 @@ function comp(tree, o) {
       return expr;
     }
     //builds a particular set of rules within a particular module context
-    function build(rules, cond) {
+    function build(rules, inCond) {
       
       let exportVar = (name, rule) => {
-        if(cond) throw new Error(`${name} can't be inside if statement`);
+        if(inCond) throw new Error(`${name} can't be inside conditional`);
       };
       //rules for each type of statement
       let ops = {
@@ -88,31 +96,40 @@ function comp(tree, o) {
           
         },
         module: rule => {
-          if(cond) throw new Error(`module can't be inside if statement`);
+          if(inCond) throw new Error(`module can't be inside conditional`);
         },
         'if': rule => {
-          
+          let cond = evalIntExpr(rule.cond);
+          if(cond) build(rule.rules, true);
+          else build(rule.elstmt, true);
         },
         join: rule => {
           
         },
         modref: rule => {
+          //find entry in our scope tree
+          let newMod = lookup(rule.name, dict);
+          //this subscope becomes our new dictionary
+          let result = doComp(rule.name, newMod, tree,
+            rule.template.map(evalIntExpr), past);
         },
         input: exportVar.bind(null, 'input'),
         output: exportVar.bind(null, 'output')
       };
       //scan through each rule
       for(let rule of rules) {
-        console.log(rule);
+        //console.log(rule);
         let fn = ops[rule.t];
         fn(rule);
       }
     }
-    build(mod.rules);
+    build(mod.rules, false);
   }
-  let dict = modRec(tree, null);
+  let root = {parent: null};
+  root.submods = modRec(tree, root);
+  
   //uses submods at the top to cooperate with the lookup function
-  return doComp(main, {submods:dict}, tree, [], []);
+  return doComp(main, root, tree, [], []);
 }
 
 module.exports = comp;
