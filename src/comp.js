@@ -22,11 +22,11 @@ function comp(tree, o) {
     let dict = {};
     for(let mod of rules) {
       if(mod.t !== 'module') continue;
-      dict[mod.name] = {
+      let entry = dict[mod.name] = {
         mod: mod,
-        submods: modRec(mod.rules, dict),
         parent: parent
       };
+      entry.submods = modRec(mod.rules, entry);
     }
     return dict;
   }
@@ -97,6 +97,8 @@ function comp(tree, o) {
         },
         module: rule => {
           if(inCond) throw new Error(`module can't be inside conditional`);
+          //otherwise ignored because modRec and the dictionary it produces are
+          //what actually is used to recognize modules
         },
         'if': rule => {
           let cond = evalIntExpr(rule.cond);
@@ -108,9 +110,11 @@ function comp(tree, o) {
         },
         modref: rule => {
           //find entry in our scope tree
-          let newMod = lookup(rule.name, dict);
+          //let newMod = lookup(rule.name, dict);
+          //console.log('MOD '+main);
+          //console.log(require('util').inspect(newMod, false, null));
           //this subscope becomes our new dictionary
-          let result = doComp(rule.name, newMod, tree,
+          let result = doComp(rule.name, entry, tree,
             rule.template.map(evalIntExpr), past);
         },
         input: exportVar.bind(null, 'input'),
