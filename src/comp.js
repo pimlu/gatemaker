@@ -49,7 +49,7 @@ function comp(tree, o) {
     if(mod === null) throw new Error(`module ${modName} not found`);
     let templ = mod.template;
     if(params.length !== templ.length) throw new Error(`module ${main} passed ${params.length} params, expected ${templ.length}`);
-    if(past.length >= opt.maxDepth) throw new Error(`module ${modName} reached max recursion depth (${config()})`)
+    if(past.length >= opt.maxDepth) throw new Error(`module ${modName} reached max recursion depth (${opt.maxDepth})`)
     let state = {
       main: main,
       params: params
