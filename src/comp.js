@@ -17,7 +17,7 @@ function comp(tree, o) {
   });*/
   let opt = Object.assign({}, config, o);
   let main = opt.main;
-  //make a parse tree of modules
+  //make a tree of modules based on the parse tree
   function modRec(rules, parent) {
     let dict = {};
     for(let mod of rules) {
@@ -31,23 +31,25 @@ function comp(tree, o) {
     return dict;
   }
   //used for looking up modules
-  function lookup(key, dict) {
-    if(!dict) return null;
-    else if(key in dict.submods) return dict.submods[key];
-    else return lookup(key, dict.parent);
+  function lookup(key, modDict) {
+    if(!modDict) return null;
+    else if(key in modDict.submods) return modDict.submods[key];
+    else return lookup(key, modDict.parent);
   }
   //builds a particular module (concretely - it's given parameters for templates)
-  function doComp(main, dict, tree, params, past) {
-    let ret = {};//TODO
+  function doComp(main, modDict, tree, params, past) {
+    let result = {
+      nodes: new Set()
+    };//TODO
     
-    let entry = lookup(main, dict);
-    let mod = entry.mod;
-    //console.log(entry);
+    let modEntry = lookup(main, modDict);
+    let modData = modEntry.mod;
+    //console.log(modEntry);
     //basic error checking
     let modName = main+(params.length?`<${params.join(',')}>`:'');
     console.log('building '+modName);
-    if(mod === null) throw new Error(`module ${modName} not found`);
-    let templ = mod.template;
+    if(modData === null) throw new Error(`module ${modName} not found`);
+    let templ = modData.template;
     if(params.length !== templ.length) throw new Error(`module ${main} passed ${params.length} params, expected ${templ.length}`);
     if(past.length >= opt.maxDepth) throw new Error(`module ${modName} reached max recursion depth (${opt.maxDepth})`)
     let state = {
@@ -65,10 +67,7 @@ function comp(tree, o) {
     //evaluating numeric values - used for templates of modules
     let ctx = _.zipObject(templ, params);
     //build our dictionary of integer operators
-    let iOpsStrs = [].concat(
-      '+-*/><'.split(''),
-      '<= >= == !='.split(' ')
-    );
+    let iOpsStrs = '+ - * / > < <= >= == !='.split(' ');
     let iOps = _.zipObject(iOpsStrs, iOpsStrs.map(
       c => eval(`(function(a,b) { return (a ${c} b) | 0; })`)
     ));
@@ -84,6 +83,7 @@ function comp(tree, o) {
       }
       return expr;
     }
+
     //builds a particular set of rules within a particular module context
     function build(rules, inCond) {
       
@@ -92,8 +92,8 @@ function comp(tree, o) {
       };
       //rules for each type of statement
       let ops = {
-        var: rule => {
-          
+        'var': rule => {
+          //console.log('var',rule);
         },
         module: rule => {
           if(inCond) throw new Error(`module can't be inside conditional`);
@@ -114,20 +114,22 @@ function comp(tree, o) {
           //console.log('MOD '+main);
           //console.log(require('util').inspect(newMod, false, null));
           //this subscope becomes our new dictionary
-          let result = doComp(rule.name, entry, tree,
+          let result = doComp(rule.name, modEntry, tree,
             rule.template.map(evalIntExpr), past);
         },
         input: exportVar.bind(null, 'input'),
         output: exportVar.bind(null, 'output')
       };
       //scan through each rule
-      for(let rule of rules) {
+      for(let i=0; i<rules.length; i++) {
+        let rule = rules[i];
         //console.log(rule);
         let fn = ops[rule.t];
         fn(rule);
       }
     }
-    build(mod.rules, false);
+    build(modData.rules, false);
+    return result;
   }
   let root = {parent: null};
   root.submods = modRec(tree, root);
