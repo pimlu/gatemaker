@@ -18,8 +18,8 @@ function compFiles(paths, opt) {
     data => parser.parse(data) //parse each file
   )).then(parses => {
     //concatenate the parse trees of our files
-    let tree = [].concat.apply([], parses);
-    opt.cb(comp(tree));
+    let parseTree = [].concat.apply([], parses);
+    opt.cb(comp(parseTree));
   });
 };
 

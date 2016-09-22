@@ -7,7 +7,7 @@ const config = {
   maxDepth: 100
 };
 
-function comp(tree, o) {
+function comp(parseTree, o) {
   //make options default to config when things aren't set
   //not allowed to use Proxy yet since it breaks debuggers
   /*opt = new Proxy(o || {}, {
@@ -37,7 +37,7 @@ function comp(tree, o) {
     else return lookup(key, modDict.parent);
   }
   //builds a particular module (concretely - it's given parameters for templates)
-  function doComp(main, modDict, tree, params, past) {
+  function doComp(main, modDict, params, past) {
     let result = {
       nodes: new Set()
     };//TODO
@@ -86,7 +86,6 @@ function comp(tree, o) {
 
     //builds a particular set of rules within a particular module context
     function build(rules, inCond) {
-      
       let exportVar = (name, rule) => {
         if(inCond) throw new Error(`${name} can't be inside conditional`);
       };
@@ -114,7 +113,7 @@ function comp(tree, o) {
           //console.log('MOD '+main);
           //console.log(require('util').inspect(newMod, false, null));
           //this subscope becomes our new dictionary
-          let result = doComp(rule.name, modEntry, tree,
+          let result = doComp(rule.name, modEntry,
             rule.template.map(evalIntExpr), past);
         },
         input: exportVar.bind(null, 'input'),
@@ -132,10 +131,10 @@ function comp(tree, o) {
     return result;
   }
   let root = {parent: null};
-  root.submods = modRec(tree, root);
+  root.submods = modRec(parseTree, root);
   
   //uses submods at the top to cooperate with the lookup function
-  return doComp(main, root, tree, [], []);
+  return doComp(main, root, [], []);
 }
 
 module.exports = comp;
